@@ -10,12 +10,13 @@ app.use(cors());
 app.use(express.json());
 // Auto-access for development (no code needed)
 app.get('/api/init', async (req, res) => {
+  const { userId } = req.query;
   try {
-    const user = await prisma.user.findFirst();
+    const user = await prisma.user.findUnique({ where: { id: userId || "" } });
     if (user) {
-      res.json({ success: true, userId: user.id, name: user.name });
+      res.json({ success: true, userId: user.id, name: user.name, role: user.role });
     } else {
-      res.status(404).json({ success: false, message: "Hali foydalanuvchilar yo'q" });
+      res.status(404).json({ success: false, message: "Foydalanuvchi topilmadi" });
     }
   } catch(e) {
     res.status(500).json({ error: e.message });
@@ -34,12 +35,14 @@ app.post('/api/login', async (req, res) => {
     });
 
     if (user) {
-      // Clear code after successful login
+      if (user.role !== 'ADMIN') {
+        return res.status(403).json({ success: false, message: "Dashboardga faqat Admin kira oladi" });
+      }
       await prisma.user.update({
         where: { id: user.id },
         data: { auth_code: null, auth_expires: null }
       });
-      res.json({ success: true, userId: user.id, telegramId: user.telegram_id, name: user.name });
+      res.json({ success: true, userId: user.id, telegramId: user.telegram_id, name: user.name, role: user.role });
     } else {
       res.status(401).json({ success: false, message: "Noto'g'ri yoki muddati o'tgan kod" });
     }
@@ -52,14 +55,20 @@ app.get('/api/stats', async (req, res) => {
   const { userId } = req.query;
   if (!userId) return res.status(400).json({ error: "userId required" });
   try {
-    const expenses = await prisma.transaction.aggregate({ where: { user_id: userId, type: 'expense' }, _sum: { amount: true } });
-    const incomes = await prisma.transaction.aggregate({ where: { user_id: userId, type: 'income' }, _sum: { amount: true } });
-    
-    const totalIncome = incomes._sum.amount || 0;
-    const totalExpense = expenses._sum.amount || 0;
-    const totalBalance = totalIncome - totalExpense;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
-    res.json({ totalIncome, totalExpense, totalBalance });
+    // Admin sees everything, Employee sees only theirs
+    const filter = user.role === 'ADMIN' ? {} : { user_id: userId };
+
+    const expenses = await prisma.transaction.aggregate({ where: { ...filter, type: 'expense' }, _sum: { amount: true } });
+    const incomes = await prisma.transaction.aggregate({ where: { ...filter, type: 'income' }, _sum: { amount: true } });
+    
+    res.json({ 
+      totalIncome: incomes._sum.amount || 0, 
+      totalExpense: expenses._sum.amount || 0, 
+      totalBalance: (incomes._sum.amount || 0) - (expenses._sum.amount || 0) 
+    });
   } catch(e) {
     res.status(500).json({error: e.message});
   }
@@ -67,13 +76,15 @@ app.get('/api/stats', async (req, res) => {
 
 app.get('/api/transactions', async (req, res) => {
   const { userId } = req.query;
-  if (!userId) return res.status(400).json({ error: "userId required" });
   try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const filter = user?.role === 'ADMIN' ? {} : { user_id: userId };
+
     const transactions = await prisma.transaction.findMany({
-      where: { user_id: userId },
-      include: { category: true },
+      where: filter,
+      include: { category: true, user: true }, // Include user to see who added it
       orderBy: { date: 'desc' },
-      take: 20
+      take: 50
     });
     res.json(transactions);
   } catch(e) {
@@ -83,10 +94,13 @@ app.get('/api/transactions', async (req, res) => {
 
 app.get('/api/debts', async (req, res) => {
   const { userId } = req.query;
-  if (!userId) return res.status(400).json({ error: "userId required" });
   try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const filter = user?.role === 'ADMIN' ? {} : { user_id: userId };
+
     const debts = await prisma.debt.findMany({ 
-      where: { user_id: userId },
+      where: filter,
+      include: { user: true },
       orderBy: { date: 'desc' } 
     });
     res.json(debts);

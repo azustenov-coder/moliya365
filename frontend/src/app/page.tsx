@@ -11,45 +11,116 @@ export default function OverviewTab() {
   const [stats, setStats] = useState({ totalIncome: 0, totalExpense: 0, totalBalance: 0 });
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [authCode, setAuthCode] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [error, setError] = useState("");
 
   const [debts, setDebts] = useState({ berilgan: 0, olingan: 0 });
   const [debtList, setDebtList] = useState<any[]>([]);
   const { t } = useLanguage();
 
-  useEffect(() => {
+  const checkAuth = () => {
     const userId = localStorage.getItem("finance_userId");
     if (userId) {
-      fetch(`${API_URL}/api/stats?userId=${userId}`)
-        .then(res => res.json())
-        .then(data => setStats(data))
-        .catch(console.error);
-
-      fetch(`${API_URL}/api/transactions?userId=${userId}`)
-        .then(res => res.json())
-        .then(data => {
-            const sorted = data.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            setTransactions(sorted.slice(0, 5));
-        })
-        .catch(console.error);
-
-      fetch(`${API_URL}/api/debts/summary?userId=${userId}`)
-        .then(res => res.json())
-        .then(data => setDebts(data))
-        .catch(console.error);
-        
-      fetch(`${API_URL}/api/debts?userId=${userId}`)
-        .then(res => res.json())
-        .then(data => {
-            setDebtList(data.filter((d: any) => d.status !== 'paid').slice(0, 3));
-        })
-        .catch(console.error);
+      setIsLoggedIn(true);
+      fetchData(userId);
     }
+  };
+
+  const fetchData = (userId: string) => {
+    fetch(`${API_URL}/api/stats?userId=${userId}`)
+      .then(res => res.json())
+      .then(data => setStats(data))
+      .catch(console.error);
+
+    fetch(`${API_URL}/api/transactions?userId=${userId}`)
+      .then(res => res.json())
+      .then(data => {
+          const sorted = data.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          setTransactions(sorted.slice(0, 5));
+      })
+      .catch(console.error);
+
+    fetch(`${API_URL}/api/debts/summary?userId=${userId}`)
+      .then(res => res.json())
+      .then(data => setDebts(data))
+      .catch(console.error);
+      
+    fetch(`${API_URL}/api/debts?userId=${userId}`)
+      .then(res => res.json())
+      .then(data => {
+          setDebtList(data.filter((d: any) => d.status !== 'paid').slice(0, 3));
+      })
+      .catch(console.error);
+  };
+
+  useEffect(() => {
+    checkAuth();
   }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (authCode.length < 6) return;
+    
+    try {
+      const res = await fetch(`${API_URL}/api/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: authCode })
+      });
+      const data = await res.json();
+      if (data.success) {
+        localStorage.setItem("finance_userId", data.userId);
+        setIsLoggedIn(true);
+        fetchData(data.userId);
+      } else {
+        setError(data.message || "Xato!");
+      }
+    } catch (err) {
+      setError("Server bilan ulanishda xato");
+    }
+  };
 
   const formatMoney = (amount: number, type?: 'income' | 'expense' | 'neutral') => {
     const sign = type === 'income' ? '+' : type === 'expense' ? '-' : '';
     return `${sign}${Math.abs(amount).toLocaleString()} UZS`;
   };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center p-6">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass-panel p-10 w-full max-w-md text-center border-[#8B5CF6]/30"
+        >
+          <div className="w-16 h-16 bg-[#8B5CF6]/20 rounded-2xl flex items-center justify-center mx-auto mb-6 neon-glow-violet">
+            <Wallet className="text-[#8B5CF6]" size={30} />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">FinFlow Admin Panel</h1>
+          <p className="text-white/50 text-sm mb-8">Botdan olgan 6 xonali kodingizni kiriting</p>
+          
+          <form onSubmit={handleLogin} className="space-y-4">
+             <input 
+               type="text" 
+               placeholder="123456" 
+               maxLength={6}
+               value={authCode}
+               onChange={(e) => setAuthCode(e.target.value)}
+               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-4 text-center text-3xl font-mono tracking-[10px] text-white outline-none focus:border-[#8B5CF6]/50 transition-colors"
+             />
+             {error && <p className="text-red-400 text-sm">{error}</p>}
+             <button 
+               type="submit"
+               className="w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-white/90 transition transform active:scale-95"
+             >
+                Kirish
+             </button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 pb-12 w-full relative">
@@ -149,13 +220,16 @@ export default function OverviewTab() {
                 key={tx.id || idx} 
                 className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${tx.type === 'income' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-[#EF4444]/10 text-[#EF4444]'}`}>
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className={`p-2 rounded-lg shrink-0 ${tx.type === 'income' ? 'bg-[#10B981]/10 text-[#10B981]' : 'bg-[#EF4444]/10 text-[#EF4444]'}`}>
                     {tx.type === 'income' ? <ArrowDownRight size={16} /> : <ArrowUpRight size={16} />}
                   </div>
-                  <div className="truncate max-w-[120px]">
+                  <div className="truncate">
                     <p className="text-sm font-medium text-white truncate">{tx.comment || tx.category?.name || "Xarajat"}</p>
-                    <p className="text-[10px] text-white/40">{new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+                    <p className="text-[10px] text-white/40 flex items-center gap-1">
+                      <span className="text-[#8B5CF6] font-bold">{tx.user?.name || "System"}:</span>
+                      {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </p>
                   </div>
                 </div>
                 <div className={`font-semibold shrink-0 text-sm ${tx.type === 'income' ? 'text-[#10B981] text-glow' : 'text-white'}`}>

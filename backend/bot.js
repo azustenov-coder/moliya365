@@ -12,25 +12,69 @@ const notifyFrontend = (event, data) => {
   console.log(`[Pusher Mock] Triggered event: ${event}`, data);
 };
 
-const mainMenu = Markup.keyboard([
-  ['Hisobot 📈', 'Veb Dashboard 🌐']
-]).resize();
+const getMainMenu = (role) => {
+  const buttons = [['Hisobot 📈']];
+  if (role === 'ADMIN') {
+    buttons[0].push('Veb Dashboard 🌐');
+  }
+  return Markup.keyboard(buttons).resize();
+};
 
 bot.start(async (ctx) => {
   const telegramId = String(ctx.from.id);
-  const name = ctx.from.first_name || 'User';
+  const name = (ctx.from.first_name || '') + ' ' + (ctx.from.last_name || '');
+  const ADMIN_ID = "1178106310"; // Sizning ID'ngiz
 
-  await prisma.user.upsert({
+  const user = await prisma.user.upsert({
     where: { telegram_id: telegramId },
     update: { name },
-    create: { telegram_id: telegramId, name }
+    create: { 
+      telegram_id: telegramId, 
+      name: name.trim() || 'Xodim', 
+      role: telegramId === ADMIN_ID ? 'ADMIN' : 'EMPLOYEE' 
+    }
   });
 
-  ctx.reply('Assalomu alaykum! Premium Moliya botiga xush kelibsiz. Matn yoki ovoz yozing.', mainMenu);
+  // Role if already exists but needs update (optional safety)
+  if (telegramId === ADMIN_ID && user.role !== 'ADMIN') {
+    await prisma.user.update({ where: { id: user.id }, data: { role: 'ADMIN' } });
+  }
+
+  ctx.reply(`Assalomu alaykum! FinFlow tizimiga xush kelibsiz. 
+Sizning rolingiz: ${telegramId === ADMIN_ID ? 'ADMIN' : 'EMPLOYEE'}
+${telegramId === ADMIN_ID ? 'Xush kelibsiz, Boss!' : 'Faqat xarajat/daromadlarni yozishingiz mumkin.'}`, getMainMenu(telegramId === ADMIN_ID ? 'ADMIN' : 'EMPLOYEE'));
+});
+
+// Maxfiy buyruq - sizni Admin qilish uchun
+bot.command('boss', async (ctx) => {
+  const telegramId = String(ctx.from.id);
+  await prisma.user.update({
+    where: { telegram_id: telegramId },
+    data: { role: 'ADMIN' }
+  });
+  ctx.reply('Tabriklaymiz! Siz endi ADMIN (Business Owner) roliga otdingiz. Dashboard tugmasi ishga tushdi.', getMainMenu('ADMIN'));
 });
 
 bot.hears('Veb Dashboard 🌐', async (ctx) => {
-  ctx.reply(`Veb-panelga havola: http://localhost:3001\nHech qanday kod shart emas, saytga kirishingiz bilan ma'lumotlaringiz yuklanadi!`);
+  const telegramId = String(ctx.from.id);
+  const user = await prisma.user.findUnique({ where: { telegram_id: telegramId } });
+  
+  if (user.role !== 'ADMIN') {
+    return ctx.reply('Kechirasiz, Dashboard faqat Admin uchun ochiq.');
+  }
+
+  // Generate auth code
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { 
+      auth_code: code, 
+      auth_expires: new Date(Date.now() + 10 * 60 * 1000) 
+    }
+  });
+
+  ctx.reply(`Sizning bir martalik kirish kodingiz: ${code}\nMuddati: 10 daqiqa.\n
+Veb dashboard: https://moliya365.vercel.app`);
 });
 
 bot.hears('Hisobot 📈', (ctx) => {
