@@ -20,6 +20,19 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
   const { t, lang, cycleLang } = useLanguage();
 
   const checkAuth = async () => {
+    // URL dan auth_id ni tekshirish (Botdan kelgan havola uchun)
+    const urlParams = new URLSearchParams(window.location.search);
+    const authIdFromUrl = urlParams.get('auth_id');
+
+    if (authIdFromUrl) {
+      localStorage.setItem("finance_userId", authIdFromUrl);
+      // URL dagi tokenni tozalab yuboramiz (chiroyliroq ko'rinishi uchun)
+      window.history.replaceState({}, document.title, "/");
+      setIsAuth(true);
+      fetchNotifications(authIdFromUrl);
+      return;
+    }
+
     const userId = localStorage.getItem("finance_userId");
     if (!userId) {
       setIsAuth(false);

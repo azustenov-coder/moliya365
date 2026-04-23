@@ -14,6 +14,8 @@ model User {
   auth_code    String?
   auth_expires DateTime?
   role         String        @default("EMPLOYEE") // ADMIN or EMPLOYEE
+  phone        String?
+  job_title    String?
   created_at   DateTime      @default(now())
   debts        Debt[]
   transactions Transaction[]

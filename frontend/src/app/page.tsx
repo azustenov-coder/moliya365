@@ -227,7 +227,9 @@ export default function OverviewTab() {
                   <div className="truncate">
                     <p className="text-sm font-medium text-white truncate">{tx.comment || tx.category?.name || "Xarajat"}</p>
                     <p className="text-[10px] text-white/40 flex items-center gap-1">
-                      <span className="text-[#8B5CF6] font-bold">{tx.user?.name || "System"}:</span>
+                      <span className="text-[#8B5CF6] font-bold">{tx.user?.name || "System"}</span>
+                      {tx.user?.job_title && <span className="text-white/20">({tx.user.job_title})</span>}
+                      <span className="mx-1">•</span>
                       {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                     </p>
                   </div>

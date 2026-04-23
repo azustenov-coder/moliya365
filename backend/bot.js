@@ -22,37 +22,44 @@ const getMainMenu = (role) => {
 
 bot.start(async (ctx) => {
   const telegramId = String(ctx.from.id);
-  const name = (ctx.from.first_name || '') + ' ' + (ctx.from.last_name || '');
-  const ADMIN_ID = "1178106310"; // Sizning ID'ngiz
+  const ADMIN_ID = "1178106310"; 
 
-  const user = await prisma.user.upsert({
-    where: { telegram_id: telegramId },
-    update: { name },
-    create: { 
-      telegram_id: telegramId, 
-      name: name.trim() || 'Xodim', 
-      role: telegramId === ADMIN_ID ? 'ADMIN' : 'EMPLOYEE' 
-    }
-  });
+  let user = await prisma.user.findUnique({ where: { telegram_id: telegramId } });
 
-  // Role if already exists but needs update (optional safety)
-  if (telegramId === ADMIN_ID && user.role !== 'ADMIN') {
-    await prisma.user.update({ where: { id: user.id }, data: { role: 'ADMIN' } });
+  if (!user) {
+    user = await prisma.user.create({
+      data: { telegram_id: telegramId, role: telegramId === ADMIN_ID ? 'ADMIN' : 'EMPLOYEE' }
+    });
   }
 
-  ctx.reply(`Assalomu alaykum! FinFlow tizimiga xush kelibsiz. 
-Sizning rolingiz: ${telegramId === ADMIN_ID ? 'ADMIN' : 'EMPLOYEE'}
-${telegramId === ADMIN_ID ? 'Xush kelibsiz, Boss!' : 'Faqat xarajat/daromadlarni yozishingiz mumkin.'}`, getMainMenu(telegramId === ADMIN_ID ? 'ADMIN' : 'EMPLOYEE'));
+  // Admin bo'lsa va ro'yxatdan o'tgan bo'lsa darhol menyu chiqadi
+  if (user.role === 'ADMIN' && user.name && user.phone) {
+    return ctx.reply(`Xush kelibsiz, Boss!`, getMainMenu('ADMIN'));
+  }
+
+  // Registratsiya boshlanishi
+  if (!user.name) {
+    state[telegramId] = { step: 'waiting_for_name' };
+    return ctx.reply("Assalomu alaykum! Tizimga xush kelibsiz. Ro'yxatdan o'tish uchun Ism va Sharifingizni kiriting (Masalan: Azizbek):");
+  }
+
+  if (!user.phone) {
+    state[telegramId] = { step: 'waiting_for_phone' };
+    return ctx.reply("Rahmat! Endi telefon raqamingizni pastdagi tugmani bosish orqali yuboring:", 
+      Markup.keyboard([[Markup.button.contactRequest("📞 Telefon raqamni yuborish")]]).resize().oneTime()
+    );
+  }
+
+  if (!user.job_title && user.role !== 'ADMIN') {
+    state[telegramId] = { step: 'waiting_for_job' };
+    return ctx.reply("Oxirgi qadam: Lavozimingizni yozing (Masalan: Sotuvchi, Omborchi va h.k.):", Markup.removeKeyboard());
+  }
+
+  ctx.reply(`Ro'yxatdan o'tish muvaffaqiyatli yakunlandi! 👋`, getMainMenu(user.role));
 });
 
-// Maxfiy buyruq - sizni Admin qilish uchun
-bot.command('boss', async (ctx) => {
-  const telegramId = String(ctx.from.id);
-  await prisma.user.update({
-    where: { telegram_id: telegramId },
-    data: { role: 'ADMIN' }
-  });
-  ctx.reply('Tabriklaymiz! Siz endi ADMIN (Business Owner) roliga otdingiz. Dashboard tugmasi ishga tushdi.', getMainMenu('ADMIN'));
+bot.command('myid', (ctx) => {
+  ctx.reply(`Sizning Telegram ID'ngiz: ${ctx.from.id}`);
 });
 
 bot.hears('Veb Dashboard 🌐', async (ctx) => {
@@ -63,18 +70,9 @@ bot.hears('Veb Dashboard 🌐', async (ctx) => {
     return ctx.reply('Kechirasiz, Dashboard faqat Admin uchun ochiq.');
   }
 
-  // Generate auth code
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { 
-      auth_code: code, 
-      auth_expires: new Date(Date.now() + 10 * 60 * 1000) 
-    }
-  });
-
-  ctx.reply(`Sizning bir martalik kirish kodingiz: ${code}\nMuddati: 10 daqiqa.\n
-Veb dashboard: https://moliya365.vercel.app`);
+  // Link with direct login userId
+  const directLink = `https://moliya365.vercel.app/?auth_id=${user.id}`;
+  ctx.reply(`Veb dashboardga havola (Kodsiz kirish):\n${directLink}`);
 });
 
 bot.hears('Hisobot 📈', (ctx) => {
@@ -164,7 +162,60 @@ async function processInput(ctx, isVoice) {
   }
 }
 
+bot.on('contact', async (ctx) => {
+  const telegramId = String(ctx.from.id);
+  const userState = state[telegramId];
+
+  if (userState?.step === 'waiting_for_phone') {
+    const phone = ctx.message.contact.phone_number;
+    await prisma.user.update({
+      where: { telegram_id: telegramId },
+      data: { phone }
+    });
+
+    const user = await prisma.user.findUnique({ where: { telegram_id: telegramId } });
+    if (user.role === 'ADMIN') {
+        delete state[telegramId];
+        return ctx.reply("Rahmat, Boss! Hamma ma'lumotlar saqlandi.", getMainMenu('ADMIN'));
+    }
+
+    state[telegramId] = { step: 'waiting_for_job' };
+    return ctx.reply("Rahmat! Oxirgi qadam: Lavozimingizni yozing (Masalan: Sotuvchi, Omborchi va h.k.):", Markup.removeKeyboard());
+  }
+});
+
 bot.on('text', async (ctx) => {
+  const telegramId = String(ctx.from.id);
+  const userState = state[telegramId];
+
+  // Ism yozish jarayoni
+  if (userState?.step === 'waiting_for_name') {
+    const name = ctx.message.text.trim();
+    if (name.length < 2) return ctx.reply("Iltimos, ismingizni to'liqroq yozing:");
+    
+    await prisma.user.update({
+      where: { telegram_id: telegramId },
+      data: { name }
+    });
+
+    state[telegramId] = { step: 'waiting_for_phone' };
+    return ctx.reply("Rahmat! Endi telefon raqamingizni pastdagi tugmani bosish orqali yuboring:", 
+        Markup.keyboard([[Markup.button.contactRequest("📞 Telefon raqamni yuborish")]]).resize().oneTime()
+    );
+  }
+
+  // Lavozim yozish jarayoni
+  if (userState?.step === 'waiting_for_job') {
+    const job = ctx.message.text.trim();
+    const user = await prisma.user.update({
+      where: { telegram_id: telegramId },
+      data: { job_title: job }
+    });
+
+    delete state[telegramId];
+    return ctx.reply("Ro'yxatdan o'tish muvaffaqiyatli yakunlandi! 👋", getMainMenu(user.role));
+  }
+
   if (ctx.message.text.startsWith('/') || ['Hisobot 📈', 'Veb Dashboard 🌐'].includes(ctx.message.text)) return;
   await processInput(ctx, false);
 });
