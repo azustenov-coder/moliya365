@@ -137,6 +137,11 @@ app.get('/api/insights', async (req, res) => {
     
     res.json(insights);
   } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: "Insight generation failed" });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => {
