@@ -109,8 +109,8 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
             isActive ? "text-white" : "text-white/40 hover:text-white/80 hover:bg-white/5"
           }`}
         >
-          <Icon size={20} className={isActive ? "text-electric-violet" : ""} />
-          <span className="font-medium text-sm tracking-wide">{label}</span>
+          <Icon size={20} className={`shrink-0 ${isActive ? "text-electric-violet" : ""}`} />
+          <span className="font-medium text-sm tracking-wide whitespace-nowrap">{label}</span>
           {isActive && (
             <motion.div
               layoutId="nav-indicator"
@@ -164,13 +164,13 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen w-full md:p-6 gap-0 md:gap-6 overflow-hidden relative box-border bg-[#050505]">
+    <div className="flex flex-col lg:flex-row h-screen w-full lg:p-6 gap-0 lg:gap-6 overflow-hidden relative box-border bg-[#050505]">
       {/* Animated Background Elements */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-electric-violet/20 blur-[120px] rounded-full pointer-events-none mix-blend-screen" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[30%] h-[40%] bg-cyber-green/10 blur-[120px] rounded-full pointer-events-none mix-blend-screen" />
 
       {/* Sidebar - Desktop */}
-      <nav className="hidden md:flex w-64 glass-panel h-full flex-col p-6 z-30 shrink-0 relative">
+      <nav className="hidden lg:flex w-64 glass-panel h-full flex-col p-6 z-30 shrink-0 relative overflow-y-auto">
         <div className="flex items-center gap-3 mb-10 px-2 mt-4">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-electric-violet to-purple-600 flex items-center justify-center neon-glow-violet">
             <Wallet size={18} className="text-white" />
@@ -211,8 +211,8 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
         </div>
       </nav>
 
-      {/* Bottom Navigation - Mobile */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-black/80 backdrop-blur-xl border-t border-white/10 px-6 py-3 flex justify-between items-center pb-8">
+      {/* Bottom Navigation - Mobile/Tablet */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-[100] bg-black/80 backdrop-blur-xl border-t border-white/10 px-8 py-3 flex justify-between items-center pb-8">
           <Link href="/" className={`${pathname === '/' ? 'text-electric-violet' : 'text-white/40'}`}>
             <LayoutDashboard size={24} />
           </Link>
@@ -228,7 +228,7 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-1 relative overflow-y-auto h-full z-20 scroll-smooth flex flex-col gap-6 p-4 md:p-0 pb-24 md:pb-0">
+      <main className="flex-1 relative overflow-y-auto h-full z-20 scroll-smooth flex flex-col gap-6 p-4 lg:p-0 pb-24 lg:pb-0">
         <header className="flex justify-between items-center pt-2 relative z-50">
           <h1 className="text-3xl font-bold tracking-tight">
             {pathname === '/' && <>{t("header.dashboard")} <span className="text-electric-violet">{t("header.dashboardSpan")}</span></>}
