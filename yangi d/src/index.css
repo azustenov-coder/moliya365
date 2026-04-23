@@ -57,7 +57,7 @@
 }
 
 .recharts-default-tooltip {
-  @apply !bg-[#050505]/90 !backdrop-blur-xl !border !border-white/10 !rounded-xl !shadow-2xl;
+  @apply !bg-brand-bg/90 !backdrop-blur-xl !border !border-white/10 !rounded-xl !shadow-2xl;
 }
 .recharts-tooltip-item {
   @apply !text-white;

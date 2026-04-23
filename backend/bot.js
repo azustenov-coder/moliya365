@@ -1,11 +1,20 @@
 const { Telegraf, Markup } = require('telegraf');
 const { PrismaClient } = require('@prisma/client');
 const { parseTransaction, transcribeAndParse } = require('./ai');
+const { subDays, startOfDay } = require('date-fns');
 
 const prisma = new PrismaClient();
 const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN);
 
 const state = {};
+
+const notifyFrontend = (event, data) => {
+  console.log(`[Pusher Mock] Triggered event: ${event}`, data);
+};
+
+const mainMenu = Markup.keyboard([
+  ['Hisobot 📈', 'Veb Dashboard 🌐']
+]).resize();
 
 bot.start(async (ctx) => {
   const telegramId = String(ctx.from.id);
@@ -17,13 +26,69 @@ bot.start(async (ctx) => {
     create: { telegram_id: telegramId, name }
   });
 
-  ctx.reply('Assalomu alaykum! Moliya botiga xush kelibsiz. Menga xarajat yoki daromadingizni yozing yoki ovozli xabar yuboring.');
+  ctx.reply('Assalomu alaykum! Premium Moliya botiga xush kelibsiz. Matn yoki ovoz yozing.', mainMenu);
+});
+
+bot.hears('Veb Dashboard 🌐', async (ctx) => {
+  ctx.reply(`Veb-panelga havola: http://localhost:3001\nHech qanday kod shart emas, saytga kirishingiz bilan ma'lumotlaringiz yuklanadi!`);
+});
+
+bot.hears('Hisobot 📈', (ctx) => {
+  ctx.reply('Statistika davrini tanlang:', 
+    Markup.inlineKeyboard([
+      [Markup.button.callback('1 haftalik statistika', 'stats_week')],
+      [Markup.button.callback('1 oylik statistika', 'stats_month')]
+    ])
+  );
+});
+
+async function getStats(telegramId, days) {
+  const user = await prisma.user.findUnique({ where: { telegram_id: String(telegramId) } });
+  if (!user) return "Foydalanuvchi topilmadi.";
+
+  const startDate = startOfDay(subDays(new Date(), days));
+
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      user_id: user.id,
+      date: { gte: startDate }
+    }
+  });
+
+  const debts = await prisma.debt.findMany({
+    where: {
+      user_id: user.id,
+      date: { gte: startDate }
+    }
+  });
+
+  const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+  const expense = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  
+  const debtGiven = debts.filter(d => d.type === 'from_me').reduce((sum, d) => sum + d.amount, 0);
+  const debtTaken = debts.filter(d => d.type === 'to_me').reduce((sum, d) => sum + d.amount, 0);
+
+  const kassa = income - expense;
+  const sofYigindi = kassa + debtGiven - debtTaken;
+
+  return `📊 *${days} kunlik MOLIYAVIY HISOBOT:*\n\n💰 Jami Kirim: ${income.toLocaleString()} UZS\n💸 Jami Chiqim: ${expense.toLocaleString()} UZS\n⚖️ Kassa balans: ${kassa.toLocaleString()} UZS\n\n🔄 *Olingan qarzlar:* ${debtTaken.toLocaleString()} UZS (Sizning majburiyatlaringiz)\n📤 *Berilgan qarzlar:* ${debtGiven.toLocaleString()} UZS (Undirilishi kerak bo'lgan aktivlar)\n\n💎 *Sof Umumiy Qoldiq:* ${sofYigindi.toLocaleString()} UZS`;
+}
+
+bot.action('stats_week', async (ctx) => {
+  const text = await getStats(ctx.from.id, 7);
+  ctx.replyWithMarkdown(text);
+  ctx.answerCbQuery();
+});
+
+bot.action('stats_month', async (ctx) => {
+  const text = await getStats(ctx.from.id, 30);
+  ctx.replyWithMarkdown(text);
+  ctx.answerCbQuery();
 });
 
 async function processInput(ctx, isVoice) {
   const telegramId = String(ctx.from.id);
-  
-  const waitMsg = await ctx.reply("Tahlil qilinmoqda... Kuting.");
+  const waitMsg = await ctx.reply("Tahlil qilinmoqda...");
 
   try {
     let data;
@@ -51,12 +116,12 @@ async function processInput(ctx, isVoice) {
     );
   } catch (error) {
     console.error(error);
-    ctx.telegram.editMessageText(ctx.chat.id, waitMsg.message_id, undefined, "Xatolik yuz berdi. Iltimos qayta urinib ko'ring.");
+    ctx.telegram.editMessageText(ctx.chat.id, waitMsg.message_id, undefined, "Xatolik yuz berdi.");
   }
 }
 
 bot.on('text', async (ctx) => {
-  if (ctx.message.text.startsWith('/')) return;
+  if (ctx.message.text.startsWith('/') || ['Hisobot 📈', 'Veb Dashboard 🌐'].includes(ctx.message.text)) return;
   await processInput(ctx, false);
 });
 
@@ -78,7 +143,7 @@ bot.action('confirm_transaction', async (ctx) => {
       category = await prisma.category.create({ data: { name: data.category, type: data.type, isCustom: true } });
     }
     
-    await prisma.transaction.create({
+    const tx = await prisma.transaction.create({
       data: {
         user_id: user.id,
         amount: data.amount,
@@ -87,8 +152,9 @@ bot.action('confirm_transaction', async (ctx) => {
         comment: data.comment
       }
     });
+    notifyFrontend('new-transaction', tx);
   } else {
-    await prisma.debt.create({
+    const debt = await prisma.debt.create({
       data: {
         user_id: user.id,
         amount: data.amount,
@@ -96,6 +162,7 @@ bot.action('confirm_transaction', async (ctx) => {
         personName: data.personName || "Noma'lum"
       }
     });
+    notifyFrontend('new-debt', debt);
   }
 
   delete state[telegramId];

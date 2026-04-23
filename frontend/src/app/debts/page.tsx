@@ -1,6 +1,7 @@
 "use client"
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_URL } from "@/config";
 import {
   Table,
   TableBody,
@@ -16,7 +17,7 @@ export default function DebtsPage() {
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/debts').then(res => setData(res.data)).catch(console.error);
+    axios.get(`${API_URL}/api/debts`).then(res => setData(res.data)).catch(console.error);
   }, []);
 
   return (
