@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String        @id @default(uuid())
+  telegram_id  String        @unique
+  name         String?
+  created_at   DateTime      @default(now())
+  debts        Debt[]
+  transactions Transaction[]
+}
+
+model Category {
+  id           String        @id @default(uuid())
+  name         String
+  type         String
+  isCustom     Boolean       @default(false)
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          String    @id @default(uuid())
+  user_id     String
+  amount      Float
+  type        String
+  category_id String?
+  comment     String?
+  date        DateTime  @default(now())
+  category    Category? @relation(fields: [category_id], references: [id])
+  user        User      @relation(fields: [user_id], references: [id])
+}
+
+model Debt {
+  id         String    @id @default(uuid())
+  user_id    String
+  amount     Float
+  type       String
+  personName String
+  dueDate    DateTime?
+  status     String    @default("pending")
+  date       DateTime  @default(now())
+  user       User      @relation(fields: [user_id], references: [id])
+}
