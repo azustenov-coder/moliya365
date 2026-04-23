@@ -126,14 +126,14 @@ export default function OverviewTab() {
     <div className="space-y-8 pb-12 w-full relative">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        <div className="col-span-1 lg:col-span-2 glass-panel p-8 min-h-[300px] flex px-10 items-center justify-between relative overflow-hidden group">
+        <div className="col-span-1 lg:col-span-2 glass-panel p-8 min-h-[300px] flex flex-col md:flex-row px-6 md:px-10 items-center justify-between relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-[#8B5CF6]/5 hover:from-[#8B5CF6]/10 to-transparent transition-colors z-0" />
           
-          <div className="relative z-10 w-1/2">
+          <div className="relative z-10 w-full md:w-1/2 text-center md:text-left mb-8 md:mb-0">
             <motion.h1 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              className="text-4xl md:text-5xl font-bold tracking-tight mb-4 leading-tight text-white"
+              className="text-3xl md:text-5xl font-bold tracking-tight mb-4 leading-tight text-white"
             >
               {t("dashboard.heroTitle")} <br/><span className="text-gradient-violet">{t("dashboard.heroSpan")}</span>
             </motion.h1>
@@ -142,13 +142,13 @@ export default function OverviewTab() {
             </p>
             <button 
               onClick={() => setIsReportOpen(true)}
-              className="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-white/90 transition transform hover:scale-105 active:scale-95 flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+              className="bg-white text-black px-6 py-3 rounded-full font-semibold hover:bg-white/90 transition transform hover:scale-105 active:scale-95 flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.3)] mx-auto md:mx-0"
             >
               {t("dashboard.fullReportBtn")} <ArrowUpRight size={18} />
             </button>
           </div>
 
-          <div className="relative z-10 w-1/2 flex justify-center items-center h-full">
+          <div className="relative z-10 w-full md:w-1/2 flex justify-center items-center h-full">
             <motion.div
               animate={{
                 rotateY: [0, 360],

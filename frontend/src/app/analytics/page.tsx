@@ -23,7 +23,15 @@ export default function AnalyticsPage() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [aiInsights, setAiInsights] = useState<{insight: string, growth: string, advice: string} | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const { t } = useLanguage();
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const userId = localStorage.getItem("finance_userId");
@@ -108,9 +116,9 @@ export default function AnalyticsPage() {
             </select>
           </div>
           
-          <div className="h-[300px] w-full">
+          <div className="h-[250px] md:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={areaData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={areaData} margin={{ top: 10, right: 10, left: isMobile ? 0 : -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorDaromad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
@@ -231,7 +239,7 @@ export default function AnalyticsPage() {
                </div>
             ) : aiInsights ? (
                <>
-                <div className="glass-panel p-5 border-l-4 border-l-electric-violet bg-electric-violet/5 rounded-r-[24px] rounded-l-none border-t-0 border-r-0 border-b-0 text-sm leading-relaxed hover:bg-electric-violet/10 transition-colors cursor-default relative overflow-hidden text-white/80">
+                <div className="glass-panel p-4 md:p-5 border-l-4 border-l-electric-violet bg-electric-violet/5 rounded-2xl md:rounded-r-[24px] md:rounded-l-none border-t-0 border-r-0 border-b-0 text-sm leading-relaxed hover:bg-electric-violet/10 transition-colors cursor-default relative overflow-hidden text-white/80">
                   <strong className="flex items-center gap-2 mb-3 text-xs uppercase tracking-widest text-white mt-1">
                     <div className="w-6 h-6 bg-electric-violet rounded-full flex items-center justify-center text-[10px] font-bold">G</div>
                     {t("analytics.aiInsight")}
@@ -239,7 +247,7 @@ export default function AnalyticsPage() {
                   {aiInsights.insight}
                 </div>
 
-                <div className="glass-panel p-5 border-l-4 border-l-cyber-green bg-cyber-green/5 rounded-r-[24px] rounded-l-none border-t-0 border-r-0 border-b-0 text-sm leading-relaxed hover:bg-cyber-green/10 transition-colors cursor-default relative overflow-hidden text-white/80">
+                <div className="glass-panel p-4 md:p-5 border-l-4 border-l-cyber-green bg-cyber-green/5 rounded-2xl md:rounded-r-[24px] md:rounded-l-none border-t-0 border-r-0 border-b-0 text-sm leading-relaxed hover:bg-cyber-green/10 transition-colors cursor-default relative overflow-hidden text-white/80">
                   <strong className="flex items-center gap-2 mb-3 text-xs uppercase tracking-widest text-white mt-1">
                      <div className="w-6 h-6 bg-cyber-green rounded-full flex items-center justify-center text-[10px] font-bold text-black">P</div>
                      {t("analytics.aiGrowth")}
@@ -247,7 +255,7 @@ export default function AnalyticsPage() {
                   {aiInsights.growth}
                 </div>
 
-                <div className="glass-panel p-5 border-l-4 border-l-blue-500 bg-blue-500/5 rounded-r-[24px] rounded-l-none border-t-0 border-r-0 border-b-0 text-sm leading-relaxed hover:bg-blue-500/10 transition-colors cursor-default relative overflow-hidden text-white/80">
+                <div className="glass-panel p-4 md:p-5 border-l-4 border-l-blue-500 bg-blue-500/5 rounded-2xl md:rounded-r-[24px] md:rounded-l-none border-t-0 border-r-0 border-b-0 text-sm leading-relaxed hover:bg-blue-500/10 transition-colors cursor-default relative overflow-hidden text-white/80">
                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 blur-[20px] rounded-full pointer-events-none" />
                   <strong className="flex items-center gap-2 mb-3 text-xs uppercase tracking-widest text-white mt-1">
                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-[10px] font-bold">S</div>
