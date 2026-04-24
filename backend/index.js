@@ -35,9 +35,6 @@ app.post('/api/login', async (req, res) => {
     });
 
     if (user) {
-      if (user.role !== 'ADMIN') {
-        return res.status(403).json({ success: false, message: "Dashboardga faqat Admin kira oladi" });
-      }
       await prisma.user.update({
         where: { id: user.id },
         data: { auth_code: null, auth_expires: null }

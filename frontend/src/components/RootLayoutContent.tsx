@@ -144,8 +144,8 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
           <div className="w-20 h-20 bg-[#8B5CF6]/20 rounded-3xl flex items-center justify-center mx-auto mb-8 neon-glow-violet">
             <Wallet className="text-[#8B5CF6]" size={40} />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">FinFlow <span className="font-light text-white/50">Admin</span></h1>
-          <p className="text-white/50 text-sm mb-10">Biznes egasining maxfiy kodi orqali kiring</p>
+          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">FinFlow <span className="font-light text-white/50">Dashboard</span></h1>
+          <p className="text-white/50 text-sm mb-10">Telegram bot orqali olingan kod bilan kiring</p>
           
           <form onSubmit={handleLogin} className="space-y-6">
              <div className="relative">
@@ -165,7 +165,7 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
              >
                 Dashboardga kirish
              </button>
-             <p className="text-xs text-white/30 pt-4 italic">Faqat biznes egasi kodi ishlaydi</p>
+             <p className="text-xs text-white/30 pt-4 italic">Kodni botdagi "Veb Dashboard" tugmasi orqali olishingiz mumkin</p>
           </form>
         </motion.div>
       </div>

@@ -97,8 +97,8 @@ export default function OverviewTab() {
           <div className="w-16 h-16 bg-[#8B5CF6]/20 rounded-2xl flex items-center justify-center mx-auto mb-6 neon-glow-violet">
             <Wallet className="text-[#8B5CF6]" size={30} />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">FinFlow Admin Panel</h1>
-          <p className="text-white/50 text-sm mb-8">Botdan olgan 6 xonali kodingizni kiriting</p>
+          <h1 className="text-2xl font-bold text-white mb-2">FinFlow Dashboard</h1>
+          <p className="text-white/50 text-sm mb-8">Telegram bot orqali olingan kodni kiriting</p>
           
           <form onSubmit={handleLogin} className="space-y-4">
              <input 

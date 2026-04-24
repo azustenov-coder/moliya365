@@ -13,10 +13,7 @@ const notifyFrontend = (event, data) => {
 };
 
 const getMainMenu = (role) => {
-  const buttons = [['Hisobot 📈']];
-  if (role === 'ADMIN') {
-    buttons[0].push('Veb Dashboard 🌐');
-  }
+  const buttons = [['Hisobot 📈', 'Veb Dashboard 🌐']];
   return Markup.keyboard(buttons).resize();
 };
 
@@ -65,10 +62,6 @@ bot.command('myid', (ctx) => {
 bot.hears('Veb Dashboard 🌐', async (ctx) => {
   const telegramId = String(ctx.from.id);
   const user = await prisma.user.findUnique({ where: { telegram_id: telegramId } });
-  
-  if (user.role !== 'ADMIN') {
-    return ctx.reply('Kechirasiz, Dashboard faqat Admin uchun ochiq.');
-  }
 
   // Link with direct login userId
   const directLink = `https://moliya365.vercel.app/?auth_id=${user.id}`;
