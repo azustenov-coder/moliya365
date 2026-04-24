@@ -11,6 +11,17 @@ interface TiltCardProps {
 }
 
 export function TiltCard({ children, className, intensity = 15 }: TiltCardProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const mouseXSpring = useSpring(x, { stiffness: 400, damping: 30 });
+  const mouseYSpring = useSpring(y, { stiffness: 400, damping: 30 });
+
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], [intensity, -intensity]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], [-intensity, intensity]);
+
   const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
