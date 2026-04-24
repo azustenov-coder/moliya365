@@ -57,7 +57,7 @@ async function transcribeAndParse(fileUrl) {
     await downloadFile(fileUrl, tempPath);
     
     const audioPart = fileToGenerativePart(tempPath, "audio/ogg");
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     
     const result = await retry(() => model.generateContent([prompt, audioPart]));
     const text = result.response.text();
@@ -76,7 +76,7 @@ async function transcribeAndParse(fileUrl) {
 
 async function parseTransaction(textInput) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
     const result = await retry(() => model.generateContent([prompt, textInput]));
     const text = result.response.text();
     const jsonStr = text.replace(/```json/gi, '').replace(/```/g, '').trim();
@@ -121,7 +121,7 @@ async function generateInsights(transactions) {
     };
   }
   
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
   
   const dataSummary = transactions.map(t => `${t.type === 'income' ? 'Kirim' : 'Chiqim'}: ${t.amount} UZS - ${t.category?.name || 'Boshqa'} (${t.comment || ''})`).join('\n');
   
