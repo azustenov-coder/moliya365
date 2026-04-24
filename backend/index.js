@@ -8,6 +8,7 @@ const app = express();
 const prisma = new PrismaClient();
 app.use(cors());
 app.use(express.json());
+app.get('/health', (req, res) => res.status(200).send('OK'));
 // Auto-access for development (no code needed)
 app.get('/api/init', async (req, res) => {
   const { userId } = req.query;
