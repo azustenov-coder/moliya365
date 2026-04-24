@@ -11,6 +11,7 @@ import { API_URL } from "@/config";
 
 export default function RootLayoutContent({ children }: { children: React.ReactNode }) {
   const [isAuth, setIsAuth] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [authCode, setAuthCode] = useState("");
   const [error, setError] = useState("");
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -30,12 +31,14 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
       window.history.replaceState({}, document.title, "/");
       setIsAuth(true);
       fetchNotifications(authIdFromUrl);
+      setIsLoading(false); // Token bor bo'lsa darhol yuklashni to'xtatamiz
       return;
     }
 
     const userId = localStorage.getItem("finance_userId");
     if (!userId) {
       setIsAuth(false);
+      setIsLoading(false);
       return;
     }
     
@@ -51,6 +54,8 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
       }
     } catch {
       setIsAuth(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -122,6 +127,10 @@ export default function RootLayoutContent({ children }: { children: React.ReactN
       </Link>
     );
   };
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-[#050505]" />;
+  }
 
   if (!isAuth) {
     return (
