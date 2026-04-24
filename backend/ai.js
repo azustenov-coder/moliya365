@@ -53,23 +53,30 @@ async function retry(fn, retries = 3, delay = 1000) {
 
 async function transcribeAndParse(fileUrl) {
   const tempPath = path.join(__dirname, `temp_${Date.now()}.ogg`);
-  await downloadFile(fileUrl, tempPath);
-  
-  const audioPart = fileToGenerativePart(tempPath, "audio/ogg");
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-  
-  const result = await retry(() => model.generateContent([prompt, audioPart]));
-  const text = result.response.text();
-  
-  fs.unlinkSync(tempPath);
-  
-  const jsonStr = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-  return JSON.parse(jsonStr);
+  try {
+    await downloadFile(fileUrl, tempPath);
+    
+    const audioPart = fileToGenerativePart(tempPath, "audio/ogg");
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    
+    const result = await retry(() => model.generateContent([prompt, audioPart]));
+    const text = result.response.text();
+    
+    const jsonStr = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+    return JSON.parse(jsonStr);
+  } catch (err) {
+    console.error("Voice Analysis Error:", err.message);
+    throw err;
+  } finally {
+    if (fs.existsSync(tempPath)) {
+      try { fs.unlinkSync(tempPath); } catch(e) {}
+    }
+  }
 }
 
 async function parseTransaction(textInput) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     const result = await retry(() => model.generateContent([prompt, textInput]));
     const text = result.response.text();
     const jsonStr = text.replace(/```json/gi, '').replace(/```/g, '').trim();
@@ -114,7 +121,7 @@ async function generateInsights(transactions) {
     };
   }
   
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   
   const dataSummary = transactions.map(t => `${t.type === 'income' ? 'Kirim' : 'Chiqim'}: ${t.amount} UZS - ${t.category?.name || 'Boshqa'} (${t.comment || ''})`).join('\n');
   
