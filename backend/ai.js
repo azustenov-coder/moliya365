@@ -57,13 +57,16 @@ async function transcribeAndParse(fileUrl) {
     await downloadFile(fileUrl, tempPath);
     
     const audioPart = fileToGenerativePart(tempPath, "audio/ogg");
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
     
     const result = await retry(() => model.generateContent([prompt, audioPart]));
     const text = result.response.text();
+    console.log("AI Raw Response:", text);
     
-    const jsonStr = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-    return JSON.parse(jsonStr);
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("AI dan yaroqli JSON ma'lumoti kelmadi.");
+    
+    return JSON.parse(jsonMatch[0]);
   } catch (err) {
     console.error("Voice Analysis Error:", err.message);
     throw err;
@@ -76,11 +79,14 @@ async function transcribeAndParse(fileUrl) {
 
 async function parseTransaction(textInput) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
     const result = await retry(() => model.generateContent([prompt, textInput]));
     const text = result.response.text();
-    const jsonStr = text.replace(/```json/gi, '').replace(/```/g, '').trim();
-    return JSON.parse(jsonStr);
+    
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("AI dan yaroqli JSON ma'lumoti kelmadi.");
+    
+    return JSON.parse(jsonMatch[0]);
   } catch (err) {
     console.error("AI parseTransaction Error, triggering simple fallback:", err.message);
     
@@ -121,7 +127,7 @@ async function generateInsights(transactions) {
     };
   }
   
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+  const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
   
   const dataSummary = transactions.map(t => `${t.type === 'income' ? 'Kirim' : 'Chiqim'}: ${t.amount} UZS - ${t.category?.name || 'Boshqa'} (${t.comment || ''})`).join('\n');
   
@@ -138,7 +144,10 @@ Faqat toza JSON formatida natija qaytaring.`;
 
   const result = await retry(() => model.generateContent(insightPrompt));
   const text = result.response.text();
-  const jsonStr = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+  
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("AI Insight JSON parse Error");
+  const jsonStr = jsonMatch[0];
   
   try {
      return JSON.parse(jsonStr);

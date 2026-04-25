@@ -150,8 +150,14 @@ async function processInput(ctx, isVoice) {
       ])
     );
   } catch (error) {
-    console.error(error);
-    ctx.telegram.editMessageText(ctx.chat.id, waitMsg.message_id, undefined, "Xatolik yuz berdi.");
+    console.error("Process Input Error:", error);
+    let errorMessage = "Kechirasiz, ma'lumotni tahlil qilishda xatolik yuz berdi. ";
+    if (error.message.includes("JSON")) {
+      errorMessage += "AI ma'lumotni to'g'ri formatlay olmadi. Iltimos, qaytadan urinib ko'ring yoki matn ko'rinishida yozing.";
+    } else {
+      errorMessage += "Iltimos, birozdan so'ng qaytadan urinib ko'ring.";
+    }
+    ctx.telegram.editMessageText(ctx.chat.id, waitMsg.message_id, undefined, errorMessage);
   }
 }
 
@@ -210,10 +216,12 @@ bot.on('text', async (ctx) => {
   }
 
   if (ctx.message.text.startsWith('/') || ['Hisobot 📈', 'Veb Dashboard 🌐'].includes(ctx.message.text)) return;
+  await ctx.sendChatAction('typing');
   await processInput(ctx, false);
 });
 
 bot.on('voice', async (ctx) => {
+  await ctx.sendChatAction('typing');
   await processInput(ctx, true);
 });
 
