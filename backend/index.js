@@ -8,7 +8,29 @@ const app = express();
 const prisma = new PrismaClient();
 app.use(cors());
 app.use(express.json());
-app.get('/health', (req, res) => res.status(200).send('OK'));
+app.get('/health', async (req, res) => {
+  try {
+    // Simple query to check DB connection and keep it awake
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).send('OK - DB Connected');
+  } catch (e) {
+    console.error('Health check failed:', e);
+    res.status(500).send('DB Error');
+  }
+});
+
+// Self-ping every 10 minutes to prevent sleep (fallback for cron-job)
+setInterval(async () => {
+  try {
+    const host = process.env.RENDER_EXTERNAL_HOSTNAME || 'localhost:5000';
+    const protocol = host.includes('localhost') ? 'http' : 'https';
+    await fetch(`${protocol}://${host}/health`);
+    console.log('Self-ping successful');
+  } catch (e) {
+    console.error('Self-ping failed:', e);
+  }
+}, 10 * 60 * 1000);
+
 // Auto-access for development (no code needed)
 app.get('/api/init', async (req, res) => {
   const { userId } = req.query;
